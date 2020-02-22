@@ -1,0 +1,1 @@
+web: build/install/app-store-rating-rss/bin/app-store-rating-rss
