@@ -12,6 +12,7 @@ version = "1.0.0"
 repositories {
     mavenLocal()
     mavenCentral()
+    maven("https://jitpack.io")
 }
 
 tasks {
@@ -53,6 +54,7 @@ dependencies {
     implementation(kotlin("stdlib-jdk8"))
     implementation("io.ktor:ktor-server-core:${versions["ktor"]}")
     implementation("io.ktor:ktor-server-netty:${versions["ktor"]}")
-    implementation("org.jraf:klibappstorerating:${versions["klibappstorerating"]}")
+//    implementation("org.jraf:klibappstorerating:${versions["klibappstorerating"]}")
+    implementation("com.github.bod:klibappstorerating:${versions["klibappstorerating"]}")
     runtimeOnly("ch.qos.logback:logback-classic:${versions["logback"]}")
 }
