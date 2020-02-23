@@ -91,15 +91,18 @@ private fun getRss(appStore: AppStore, appId: String, rating: Float, friendlyNam
         AppStore.GOOGLE_PLAY_STORE -> "Google Play Store"
     }
     val appName = friendlyName ?: appId
+    val link = KLibAppStoreRating.getStorePageUrl(appStore, appId).escapeHTML()
     return """
-        <?xml version="1.0" encoding="UTF-8" ?>
+        <?xml version="1.0" encoding="UTF-8"?>
         <rss version="2.0">
             <channel>
                 <title>$appStoreStr ratings for $appName</title>
+                <description>$appStoreStr ratings for $appName</description>
+                <link>$link</link>
                 <item>
                     <guid isPermaLink="false">${getTodayGuid()}</guid>
                     <title>Today's $appStoreStr rating for $appName is ${formatRating(rating)}</title>
-                    <link>${KLibAppStoreRating.getStorePageUrl(appStore, appId).escapeHTML()}</link>
+                    <link>$link</link>
                 </item>
             </channel>
         </rss>
