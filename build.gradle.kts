@@ -12,6 +12,7 @@ version = "1.0.0"
 repositories {
     mavenLocal()
     mavenCentral()
+    maven("https://dl.bintray.com/bod/JRAF")
     maven("https://jitpack.io")
 }
 
@@ -46,7 +47,7 @@ application {
 
 val versions = mapOf(
     "ktor" to "1.3.0",
-    "klibappstorerating" to "1.0.0",
+    "klibappstorerating" to "1.1.0",
     "logback" to "1.2.3"
 )
 
@@ -54,7 +55,7 @@ dependencies {
     implementation(kotlin("stdlib-jdk8"))
     implementation("io.ktor:ktor-server-core:${versions["ktor"]}")
     implementation("io.ktor:ktor-server-netty:${versions["ktor"]}")
-//    implementation("org.jraf:klibappstorerating:${versions["klibappstorerating"]}")
-    implementation("com.github.bod:klibappstorerating:${versions["klibappstorerating"]}")
+    implementation("org.jraf:klibappstorerating:${versions["klibappstorerating"]}")
+//    implementation("com.github.bod:klibappstorerating:${versions["klibappstorerating"]}")
     runtimeOnly("ch.qos.logback:logback-classic:${versions["logback"]}")
 }
