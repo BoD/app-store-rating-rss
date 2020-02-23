@@ -13,6 +13,7 @@ import io.ktor.routing.get
 import io.ktor.routing.routing
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
+import io.ktor.util.escapeHTML
 import org.jraf.klibappstorerating.AppStore
 import org.jraf.klibappstorerating.KLibAppStoreRating
 import org.jraf.klibappstorerating.RatingRetrievalException
@@ -98,7 +99,7 @@ private fun getRss(appStore: AppStore, appId: String, rating: Float, friendlyNam
                 <item>
                     <guid isPermaLink="false">${getTodayGuid()}</guid>
                     <title>Today's $appStoreStr rating for $appName is ${formatRating(rating)}</title>
-                    <link>${KLibAppStoreRating.getStorePageUrl(appStore, appId)}</link>
+                    <link>${KLibAppStoreRating.getStorePageUrl(appStore, appId).escapeHTML()}</link>
                 </item>
             </channel>
         </rss>
