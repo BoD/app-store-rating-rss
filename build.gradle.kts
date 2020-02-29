@@ -11,10 +11,19 @@ version = "1.0.0"
 
 repositories {
     mavenLocal()
+    jcenter()
     mavenCentral()
     maven("https://dl.bintray.com/bod/JRAF")
     maven("https://jitpack.io")
 }
+
+val versions = mapOf(
+    "gradle" to "6.2.1",
+    "ktor" to "1.3.1",
+    "klibappstorerating" to "1.1.0",
+    "logback" to "1.2.3",
+    "kotlinxHtml" to "0.7.1"
+)
 
 tasks {
     compileKotlin {
@@ -27,7 +36,7 @@ tasks {
 
     wrapper {
         distributionType = Wrapper.DistributionType.ALL
-        gradleVersion = "6.2"
+        gradleVersion = versions["gradle"]
     }
 }
 
@@ -45,17 +54,21 @@ application {
     mainClassName = "org.jraf.appstoreratingrss.main.MainKt"
 }
 
-val versions = mapOf(
-    "ktor" to "1.3.0",
-    "klibappstorerating" to "1.1.0",
-    "logback" to "1.2.3"
-)
-
 dependencies {
+    // Kotlin
     implementation(kotlin("stdlib-jdk8"))
+
+    // Ktor
     implementation("io.ktor:ktor-server-core:${versions["ktor"]}")
     implementation("io.ktor:ktor-server-netty:${versions["ktor"]}")
+
+    // App Store Rating
     implementation("org.jraf:klibappstorerating:${versions["klibappstorerating"]}")
-//    implementation("com.github.bod:klibappstorerating:${versions["klibappstorerating"]}")
+    // implementation("com.github.bod:klibappstorerating:${versions["klibappstorerating"]}")
+
+    // Logback
     runtimeOnly("ch.qos.logback:logback-classic:${versions["logback"]}")
+
+    // Kotlinx Html
+    implementation("org.jetbrains.kotlinx:kotlinx-html-jvm:${versions["kotlinxHtml"]}")
 }

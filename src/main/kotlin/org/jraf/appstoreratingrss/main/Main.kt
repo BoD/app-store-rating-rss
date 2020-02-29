@@ -19,9 +19,10 @@ import org.jraf.klibappstorerating.KLibAppStoreRating
 import org.jraf.klibappstorerating.RatingRetrievalException
 import java.io.FileNotFoundException
 import java.text.DecimalFormat
-import java.text.SimpleDateFormat
-import java.util.Date
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import java.util.Locale
+
 
 private const val DEFAULT_PORT = 8042
 
@@ -29,15 +30,18 @@ private const val ENV_PORT = "PORT"
 
 private const val PATH_APP_STORE_ID = "storeId"
 private const val PATH_APP_ID = "appId"
+
 private const val PARAM_FRIENDLY_NAME = "friendlyName"
+private const val PARAM_HTML = "html"
+private const val PARAM_HTML_TRUE = "true"
 
 private const val STORE_ID_GOOGLE_PLAY_STORE = "googlePlayStore"
 private const val STORE_ID_APPLE_APP_STORE = "appleAppStore"
 
 private const val APP_URL = "https://app-store-rating-rss.herokuapp.com"
 
-private val GUID_DATE_FORMAT = SimpleDateFormat("YYYY-MM-dd")
-private val PUB_DATE_FORMAT = SimpleDateFormat("EEE, d MMM yyyy HH:mm:ss Z", Locale.US)
+private val GUID_DATE_FORMAT = DateTimeFormatter.ofPattern("YYYY-MM-dd")
+private val PUB_DATE_FORMAT = DateTimeFormatter.ofPattern("EEE, d MMM yyyy '00:00:00 Z'", Locale.US)
 private val RATING_DECIMAL_FORMAT = DecimalFormat("#.##")
 
 
@@ -70,6 +74,7 @@ fun main() {
         }
 
         routing {
+            // RSS
             get("{$PATH_APP_STORE_ID}/{$PATH_APP_ID}") {
                 val appStoreId = call.parameters[PATH_APP_STORE_ID]!!
                 val appId = call.parameters[PATH_APP_ID]!!
@@ -81,19 +86,29 @@ fun main() {
                 val friendlyName = call.request.queryParameters[PARAM_FRIENDLY_NAME]
                 val rating = KLibAppStoreRating.retrieveRating(appStore, appId)
 
-                call.respondText(getRss(appStore, appId, rating, friendlyName), ContentType.Application.Rss.withCharset(Charsets.UTF_8))
+                val wantHtml = call.request.queryParameters[PARAM_HTML] == PARAM_HTML_TRUE
+                if (wantHtml) {
+                    call.respondText(getHtml(appStore, appId, rating, friendlyName), ContentType.Text.Html.withCharset(Charsets.UTF_8))
+                } else {
+                    call.respondText(getRss(appStore, appId, rating, friendlyName), ContentType.Application.Rss.withCharset(Charsets.UTF_8))
+                }
             }
         }
     }.start(wait = true)
 }
 
-private fun getRss(appStore: AppStore, appId: String, rating: Float, friendlyName: String?): String {
-    val appStoreStr = when (appStore) {
+private fun getAppStoreName(appStore: AppStore): String {
+    return when (appStore) {
         AppStore.APPLE_APP_STORE -> "Apple App Store"
         AppStore.GOOGLE_PLAY_STORE -> "Google Play Store"
     }
+}
+
+private fun getRss(appStore: AppStore, appId: String, rating: Float, friendlyName: String?): String {
+    val appStoreStr = getAppStoreName(appStore)
     val appName = friendlyName ?: appId
     val link = KLibAppStoreRating.getStorePageUrl(appStore, appId).escapeHTML()
+    val today = LocalDate.now()
     return """
         <?xml version="1.0" encoding="UTF-8"?>
         <rss version="2.0">
@@ -102,9 +117,32 @@ private fun getRss(appStore: AppStore, appId: String, rating: Float, friendlyNam
                 <description>$appStoreStr ratings for $appName</description>
                 <link>$link</link>
                 <item>
-                    <guid isPermaLink="false">${getTodayGuid()}</guid>
+                    <guid isPermaLink="false">${formatGuid(today)}</guid>
                     <title>Today's $appStoreStr rating for $appName is ${formatRating(rating)}</title>
-                    <pubDate>${getTodayPubDate()}</pubDate>
+                    <pubDate>${formatPubDate(today)}</pubDate>
+                    <link>$link</link>
+                </item>
+            </channel>
+        </rss>
+    """.trimIndent()
+}
+
+private fun getHtml(appStore: AppStore, appId: String, rating: Float, friendlyName: String?): String {
+    val appStoreStr = getAppStoreName(appStore)
+    val appName = friendlyName ?: appId
+    val link = KLibAppStoreRating.getStorePageUrl(appStore, appId).escapeHTML()
+    val today = LocalDate.now()
+    return """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <rss version="2.0">
+            <channel>
+                <title>$appStoreStr ratings for $appName</title>
+                <description>$appStoreStr ratings for $appName</description>
+                <link>$link</link>
+                <item>
+                    <guid isPermaLink="false">${formatGuid(today)}</guid>
+                    <title>Today's $appStoreStr rating for $appName is ${formatRating(rating)}</title>
+                    <pubDate>${formatPubDate(today)}</pubDate>
                     <link>$link</link>
                 </item>
             </channel>
@@ -115,6 +153,6 @@ private fun getRss(appStore: AppStore, appId: String, rating: Float, friendlyNam
 
 private fun formatRating(rating: Float): String = RATING_DECIMAL_FORMAT.format(rating)
 
-private fun getTodayGuid(): String = GUID_DATE_FORMAT.format(Date())
+private fun formatGuid(date: LocalDate): String = date.format(GUID_DATE_FORMAT)
 
-private fun getTodayPubDate(): String = PUB_DATE_FORMAT.format(Date())
+private fun formatPubDate(date: LocalDate): String = PUB_DATE_FORMAT.format(date)
