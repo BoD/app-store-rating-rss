@@ -10,7 +10,6 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.URLBuilder
 import io.ktor.http.withCharset
 import io.ktor.request.host
-import io.ktor.request.port
 import io.ktor.request.uri
 import io.ktor.response.respond
 import io.ktor.response.respondText
@@ -103,11 +102,7 @@ fun main() {
                 } else {
                     val wantNoStoreLink = call.request.queryParameters[PARAM_NO_STORE_LINK] == PARAM_TRUE
                     val selfLink = if (wantNoStoreLink) {
-                        val port = when (val requestPort = call.request.port()) {
-                            80, 443 -> ""
-                            else -> ":$requestPort"
-                        }
-                        URLBuilder("${call.request.origin.scheme}://${call.request.host()}$port${call.request.uri}").apply {
+                        URLBuilder("${call.request.origin.scheme}://${call.request.host()}${call.request.uri}").apply {
                             parameters.append(PARAM_HTML, PARAM_TRUE)
                         }.buildString()
                     } else {
