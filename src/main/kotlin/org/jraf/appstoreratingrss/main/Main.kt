@@ -21,6 +21,7 @@ import java.io.FileNotFoundException
 import java.text.DecimalFormat
 import java.text.SimpleDateFormat
 import java.util.Date
+import java.util.Locale
 
 private const val DEFAULT_PORT = 8042
 
@@ -35,7 +36,8 @@ private const val STORE_ID_APPLE_APP_STORE = "appleAppStore"
 
 private const val APP_URL = "https://app-store-rating-rss.herokuapp.com"
 
-private val GUID_TIME_FORMAT = SimpleDateFormat("YYYY-MM-dd")
+private val GUID_DATE_FORMAT = SimpleDateFormat("YYYY-MM-dd")
+private val PUB_DATE_FORMAT = SimpleDateFormat("EEE, d MMM yyyy HH:mm:ss Z", Locale.US)
 private val RATING_DECIMAL_FORMAT = DecimalFormat("#.##")
 
 
@@ -102,6 +104,7 @@ private fun getRss(appStore: AppStore, appId: String, rating: Float, friendlyNam
                 <item>
                     <guid isPermaLink="false">${getTodayGuid()}</guid>
                     <title>Today's $appStoreStr rating for $appName is ${formatRating(rating)}</title>
+                    <pubDate>${getTodayPubDate()}</pubDate>
                     <link>$link</link>
                 </item>
             </channel>
@@ -112,4 +115,6 @@ private fun getRss(appStore: AppStore, appId: String, rating: Float, friendlyNam
 
 private fun formatRating(rating: Float): String = RATING_DECIMAL_FORMAT.format(rating)
 
-private fun getTodayGuid(): String = GUID_TIME_FORMAT.format(Date())
+private fun getTodayGuid(): String = GUID_DATE_FORMAT.format(Date())
+
+private fun getTodayPubDate(): String = PUB_DATE_FORMAT.format(Date())
