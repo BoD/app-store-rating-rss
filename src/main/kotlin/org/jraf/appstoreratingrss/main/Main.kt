@@ -4,9 +4,14 @@ import io.ktor.application.call
 import io.ktor.application.install
 import io.ktor.features.DefaultHeaders
 import io.ktor.features.StatusPages
+import io.ktor.features.origin
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.URLBuilder
 import io.ktor.http.withCharset
+import io.ktor.request.host
+import io.ktor.request.port
+import io.ktor.request.uri
 import io.ktor.response.respond
 import io.ktor.response.respondText
 import io.ktor.routing.get
@@ -14,6 +19,12 @@ import io.ktor.routing.routing
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
 import io.ktor.util.escapeHTML
+import kotlinx.html.a
+import kotlinx.html.body
+import kotlinx.html.head
+import kotlinx.html.html
+import kotlinx.html.stream.createHTML
+import kotlinx.html.title
 import org.jraf.klibappstorerating.AppStore
 import org.jraf.klibappstorerating.KLibAppStoreRating
 import org.jraf.klibappstorerating.RatingRetrievalException
@@ -33,7 +44,8 @@ private const val PATH_APP_ID = "appId"
 
 private const val PARAM_FRIENDLY_NAME = "friendlyName"
 private const val PARAM_HTML = "html"
-private const val PARAM_HTML_TRUE = "true"
+private const val PARAM_TRUE = "true"
+private const val PARAM_NO_STORE_LINK = "noStoreLink"
 
 private const val STORE_ID_GOOGLE_PLAY_STORE = "googlePlayStore"
 private const val STORE_ID_APPLE_APP_STORE = "appleAppStore"
@@ -46,8 +58,8 @@ private val RATING_DECIMAL_FORMAT = DecimalFormat("#.##")
 
 
 fun main() {
-    val port = System.getenv(ENV_PORT)?.toInt() ?: DEFAULT_PORT
-    embeddedServer(Netty, port) {
+    val listenPort = System.getenv(ENV_PORT)?.toInt() ?: DEFAULT_PORT
+    embeddedServer(Netty, listenPort) {
         install(DefaultHeaders)
 
         install(StatusPages) {
@@ -74,7 +86,6 @@ fun main() {
         }
 
         routing {
-            // RSS
             get("{$PATH_APP_STORE_ID}/{$PATH_APP_ID}") {
                 val appStoreId = call.parameters[PATH_APP_STORE_ID]!!
                 val appId = call.parameters[PATH_APP_ID]!!
@@ -86,11 +97,23 @@ fun main() {
                 val friendlyName = call.request.queryParameters[PARAM_FRIENDLY_NAME]
                 val rating = KLibAppStoreRating.retrieveRating(appStore, appId)
 
-                val wantHtml = call.request.queryParameters[PARAM_HTML] == PARAM_HTML_TRUE
+                val wantHtml = call.request.queryParameters[PARAM_HTML] == PARAM_TRUE
                 if (wantHtml) {
                     call.respondText(getHtml(appStore, appId, rating, friendlyName), ContentType.Text.Html.withCharset(Charsets.UTF_8))
                 } else {
-                    call.respondText(getRss(appStore, appId, rating, friendlyName), ContentType.Application.Rss.withCharset(Charsets.UTF_8))
+                    val wantNoStoreLink = call.request.queryParameters[PARAM_NO_STORE_LINK] == PARAM_TRUE
+                    val selfLink = if (wantNoStoreLink) {
+                        val port = when (val requestPort = call.request.port()) {
+                            80, 443 -> ""
+                            else -> ":$requestPort"
+                        }
+                        URLBuilder("${call.request.origin.scheme}://${call.request.host()}$port${call.request.uri}").apply {
+                            parameters.append(PARAM_HTML, PARAM_TRUE)
+                        }.buildString()
+                    } else {
+                        null
+                    }
+                    call.respondText(getRss(appStore, appId, rating, friendlyName, selfLink), ContentType.Application.Rss.withCharset(Charsets.UTF_8))
                 }
             }
         }
@@ -104,10 +127,16 @@ private fun getAppStoreName(appStore: AppStore): String {
     }
 }
 
-private fun getRss(appStore: AppStore, appId: String, rating: Float, friendlyName: String?): String {
+private fun getRss(
+    appStore: AppStore,
+    appId: String,
+    rating: Float,
+    friendlyName: String?,
+    selfLink: String?
+): String {
     val appStoreStr = getAppStoreName(appStore)
     val appName = friendlyName ?: appId
-    val link = KLibAppStoreRating.getStorePageUrl(appStore, appId).escapeHTML()
+    val link = selfLink ?: KLibAppStoreRating.getStorePageUrl(appStore, appId).escapeHTML()
     val today = LocalDate.now()
     return """
         <?xml version="1.0" encoding="UTF-8"?>
@@ -131,23 +160,15 @@ private fun getHtml(appStore: AppStore, appId: String, rating: Float, friendlyNa
     val appStoreStr = getAppStoreName(appStore)
     val appName = friendlyName ?: appId
     val link = KLibAppStoreRating.getStorePageUrl(appStore, appId).escapeHTML()
-    val today = LocalDate.now()
-    return """
-        <?xml version="1.0" encoding="UTF-8"?>
-        <rss version="2.0">
-            <channel>
-                <title>$appStoreStr ratings for $appName</title>
-                <description>$appStoreStr ratings for $appName</description>
-                <link>$link</link>
-                <item>
-                    <guid isPermaLink="false">${formatGuid(today)}</guid>
-                    <title>Today's $appStoreStr rating for $appName is ${formatRating(rating)}</title>
-                    <pubDate>${formatPubDate(today)}</pubDate>
-                    <link>$link</link>
-                </item>
-            </channel>
-        </rss>
-    """.trimIndent()
+    return createHTML()
+        .html {
+            head {
+                title("Today's $appStoreStr rating for $appName is ${formatRating(rating)}")
+            }
+            body {
+                a(href = link) { +"Today's $appStoreStr rating for $appName is ${formatRating(rating)}" }
+            }
+        }.toString()
 }
 
 
