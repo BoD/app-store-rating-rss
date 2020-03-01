@@ -131,7 +131,7 @@ private fun getRss(
 ): String {
     val appStoreStr = getAppStoreName(appStore)
     val appName = friendlyName ?: appId
-    val link = selfLink ?: KLibAppStoreRating.getStorePageUrl(appStore, appId).escapeHTML()
+    val link = (selfLink ?: KLibAppStoreRating.getStorePageUrl(appStore, appId)).escapeHTML()
     val today = LocalDate.now()
     return """
         <?xml version="1.0" encoding="UTF-8"?>
