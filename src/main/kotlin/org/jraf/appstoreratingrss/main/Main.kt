@@ -52,6 +52,7 @@ import kotlinx.html.title
 import org.jraf.klibappstorerating.AppStore
 import org.jraf.klibappstorerating.KLibAppStoreRating
 import org.jraf.klibappstorerating.RatingRetrievalException
+import org.slf4j.LoggerFactory
 import java.io.FileNotFoundException
 import java.text.DecimalFormat
 import java.time.LocalDate
@@ -80,6 +81,8 @@ private val GUID_DATE_FORMAT = DateTimeFormatter.ofPattern("YYYY-MM-dd")
 private val PUB_DATE_FORMAT = DateTimeFormatter.ofPattern("EEE, d MMM yyyy '00:00:00 Z'", Locale.US)
 private val RATING_DECIMAL_FORMAT = DecimalFormat("#.##")
 
+private val logger = LoggerFactory.getLogger("Main")
+
 
 fun main() {
     val listenPort = System.getenv(ENV_PORT)?.toInt() ?: DEFAULT_PORT
@@ -103,7 +106,7 @@ fun main() {
                     HttpStatusCode.BadRequest, if (cause is FileNotFoundException) {
                         "Could not retrieve the rating for this app:\n${cause.message} not found"
                     } else {
-                        exception.message ?: "Could not retrieve the rating for this app"
+                        "Could not retrieve the rating for this app: ${exception.message}"
                     }
                 )
             }
@@ -119,11 +122,16 @@ fun main() {
                     else -> throw IllegalArgumentException("Unknown app store, authorized values are:\n- $STORE_ID_GOOGLE_PLAY_STORE\n- $STORE_ID_APPLE_APP_STORE")
                 }
                 val friendlyName = call.request.queryParameters[PARAM_FRIENDLY_NAME]
+                logger.debug("Getting Rating for $appStoreId/$appId...")
                 val rating = KLibAppStoreRating.retrieveRating(appStore, appId)
+                logger.debug("Rating for $appStoreId/$appId: $rating")
 
                 val wantHtml = call.request.queryParameters[PARAM_HTML] == PARAM_TRUE
                 if (wantHtml) {
-                    call.respondText(getHtml(appStore, appId, rating, friendlyName), ContentType.Text.Html.withCharset(Charsets.UTF_8))
+                    call.respondText(
+                        getHtml(appStore, appId, rating, friendlyName),
+                        ContentType.Text.Html.withCharset(Charsets.UTF_8)
+                    )
                 } else {
                     val wantNoStoreLink = call.request.queryParameters[PARAM_NO_STORE_LINK] == PARAM_TRUE
                     val selfLink = if (wantNoStoreLink) {
@@ -133,7 +141,10 @@ fun main() {
                     } else {
                         null
                     }
-                    call.respondText(getRss(appStore, appId, rating, friendlyName, selfLink), ContentType.Application.Rss.withCharset(Charsets.UTF_8))
+                    call.respondText(
+                        getRss(appStore, appId, rating, friendlyName, selfLink),
+                        ContentType.Application.Rss.withCharset(Charsets.UTF_8)
+                    )
                 }
             }
         }
